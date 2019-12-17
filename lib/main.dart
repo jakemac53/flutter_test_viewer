@@ -52,7 +52,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  Map<int, TestSuite> suites;
+  final suites = <int, TestSuite>{};
 
   @override
   void initState() {
@@ -79,11 +79,12 @@ class _HomePageState extends State<HomePage> {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            for (var suite in suites.values)
-              Text(
-                'Suite ${suite.suite.id} started: ${suite.suite.path}',
-              ),
+          children: [
+            if (suites != null)
+              for (var suite in suites.values)
+                Text(
+                  'Suite ${suite.suite.id} started: ${suite.suite.path}',
+                ),
           ],
         ),
       ),

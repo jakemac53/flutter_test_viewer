@@ -9,8 +9,10 @@ import '../test_runner.dart';
 class JsonReporterRunner implements TestRunner {
   @override
   TestResults runAllTests() {
-    var testProcess =
-        Process.start('pub', ['run', 'test', '--reporter', 'json']);
+    print('running `pub run test`');
+    var testProcess = Process.start(
+        'pub', ['run', 'test', '--reporter', 'json'],
+        workingDirectory: '/usr/local/google/home/jakemac/build/build_modules');
     return _JsonReporterResults(testProcess);
   }
 }
@@ -33,6 +35,10 @@ class _JsonReporterResults implements TestResults {
           .map(utf8.decode)
           .transform(const LineSplitter())
           .listen(_handleLine);
+      process.stderr
+          .map(utf8.decode)
+          .transform(const LineSplitter())
+          .listen(print);
     });
   }
 
@@ -41,6 +47,7 @@ class _JsonReporterResults implements TestResults {
   }
 
   void _handleLine(String json) {
+    print(json);
     var parsed = jsonDecode(json);
     var event = Event.parse(parsed);
     if (event is StartEvent || event is AllSuitesEvent || event is DebugEvent) {
