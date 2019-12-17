@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
@@ -53,21 +55,25 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final suites = <int, TestSuite>{};
+  StreamSubscription<TestSuite> _suiteListener;
 
   @override
   void initState() {
     super.initState();
 
     var runner = JsonReporterRunner();
-    _listenForSuites(runner.runAllTests());
-  }
-
-  void _listenForSuites(TestResults results) async {
-    await for (var suite in results.testSuites) {
+    _suiteListener = runner.runAllTests().testSuites.listen((suite) {
       setState(() {
         suites[suite.suite.id] = suite;
       });
-    }
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _suiteListener.cancel();
+    _suiteListener = null;
   }
 
   @override
@@ -80,14 +86,102 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (suites != null)
-              for (var suite in suites.values)
-                Text(
-                  'Suite ${suite.suite.id} started: ${suite.suite.path}',
-                ),
+            for (var suite in suites.values) TestSuiteWidget(suite),
           ],
         ),
       ),
+    );
+  }
+}
+
+class TestSuiteWidget extends StatefulWidget {
+  TestSuiteWidget(this.suite, {Key key}) : super(key: key);
+
+  final TestSuite suite;
+
+  @override
+  _TestSuiteState createState() => _TestSuiteState(suite);
+}
+
+class _TestSuiteState extends State<TestSuiteWidget> {
+  final TestSuite suite;
+  final groups = <int, TestGroup>{};
+  StreamSubscription<TestGroup> _groupListener;
+
+  _TestSuiteState(this.suite);
+
+  @override
+  void initState() {
+    super.initState();
+    _groupListener = suite.groups.listen((group) {
+      setState(() {
+        groups[group.group.id] = group;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _groupListener.cancel();
+    _groupListener = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Text('Suite: ${suite.suite.path} on ${suite.suite.platform}'),
+        for (var group in groups.values) TestGroupWidget(group),
+      ],
+    );
+  }
+}
+
+class TestGroupWidget extends StatefulWidget {
+  TestGroupWidget(this.group, {Key key}) : super(key: key);
+
+  final TestGroup group;
+
+  @override
+  _TestGroupState createState() => _TestGroupState(group);
+}
+
+class _TestGroupState extends State<TestGroupWidget> {
+  final TestGroup group;
+  final tests = <int, TestRun>{};
+
+  StreamSubscription<TestRun> _testRunListener;
+
+  _TestGroupState(this.group);
+
+  @override
+  void initState() {
+    super.initState();
+    _testRunListener = group.tests.listen((test) {
+      setState(() {
+        tests[test.test.id] = test;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _testRunListener.cancel();
+    _testRunListener = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        if (group.group.name != null) Text('Group: ${group.group.name}'),
+        for (var test in tests.values)
+          Text(
+            'Test: ${test.test.name}',
+          ),
+      ],
     );
   }
 }

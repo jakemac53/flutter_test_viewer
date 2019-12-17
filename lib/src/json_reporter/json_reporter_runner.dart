@@ -114,16 +114,15 @@ class _JsonReporterResults implements TestResults {
   void _handleTestDone(TestDoneEvent event) {
     var test = _tests[event.testID];
     if (test == null) {
-      throw StateError('No test with id `${event.testID}` found!');
+      if (!event.hidden) {
+        throw StateError('No test with id `${event.testID}` found!');
+      }
     }
     test.onDone(event);
   }
 
   void _handleDone(DoneEvent event) {
-    if (_tests.isNotEmpty) {
-      throw StateError(
-          'Got done event but ${_tests.length} tests are still running');
-    }
+    // TODO: anything?
   }
 }
 
