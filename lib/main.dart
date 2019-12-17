@@ -84,9 +84,24 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            for (var suite in suites.values) TestSuiteWidget(suite),
+            Text(
+              'All Suites',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 30),
+            ),
+            Expanded(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: 200.0),
+                child: ListView.builder(
+                  itemCount: suites.values.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                        title: TestSuiteWidget(suites.values.elementAt(index)));
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       ),
