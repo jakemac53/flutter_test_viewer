@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'models.dart';
+
 abstract class TestRunner {
-  Future<TestResults> runAllTests();
+  TestResults runAllTests();
 }
 
 abstract class TestResults {
@@ -9,15 +11,20 @@ abstract class TestResults {
 }
 
 abstract class TestSuite {
+  Suite get suite;
+
   Stream<TestGroup> get groups;
 }
 
 abstract class TestGroup {
-  Stream<Test> get tests;
+  Group get group;
+
+  Stream<TestRun> get tests;
 }
 
-abstract class Test {
-  String get name;
+abstract class TestRun {
+  Test get test;
+
   Future<TestStatus> get status;
   Stream<void> get errors;
 }

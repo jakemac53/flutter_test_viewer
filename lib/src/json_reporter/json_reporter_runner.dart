@@ -2,22 +2,20 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'models.dart' hide Test;
-import 'models.dart' as models show Test;
+import '../models.dart' hide Test;
+import '../models.dart' as models show Test;
 import '../test_runner.dart';
 
 class JsonReporterRunner implements TestRunner {
   @override
-  Future<TestResults> runAllTests() async {
+  TestResults runAllTests() {
     var testProcess =
-        await Process.start('pub', ['run', 'test', '--reporter', 'json']);
+        Process.start('pub', ['run', 'test', '--reporter', 'json']);
     return _JsonReporterResults(testProcess);
   }
 }
 
 class _JsonReporterResults implements TestResults {
-  final Process _testProcess;
-
   @override
   Stream<TestSuite> get testSuites => _testSuiteController.stream;
   final _testSuiteController = StreamController<TestSuite>();
@@ -25,15 +23,17 @@ class _JsonReporterResults implements TestResults {
   final _suites = <int, _JsonTestSuite>{};
   final _tests = <int, _JsonTestTest>{};
 
-  _JsonReporterResults(this._testProcess) {
-    _testProcess.exitCode.then((_) {
-      _cleanUp();
-    });
+  _JsonReporterResults(Future<Process> testProcess) {
+    testProcess.then((process) {
+      process.exitCode.then((_) {
+        _cleanUp();
+      });
 
-    _testProcess.stdout
-        .map(utf8.decode)
-        .transform(const LineSplitter())
-        .listen(_handleLine);
+      process.stdout
+          .map(utf8.decode)
+          .transform(const LineSplitter())
+          .listen(_handleLine);
+    });
   }
 
   void _cleanUp() {
@@ -141,8 +141,8 @@ class _JsonTestSuite implements TestSuite {
 
 class _JsonTestGroup implements TestGroup {
   @override
-  Stream<Test> get tests => _testController.stream;
-  final _testController = StreamController<Test>();
+  Stream<TestRun> get tests => _testController.stream;
+  final _testController = StreamController<TestRun>();
 
   final Group group;
 
@@ -157,13 +157,10 @@ class _JsonTestGroup implements TestGroup {
   void close() => _testController.close();
 }
 
-class _JsonTestTest implements Test {
+class _JsonTestTest implements TestRun {
   @override
   Stream<void> get errors => _errorsController.stream;
   final _errorsController = StreamController<void>();
-
-  @override
-  String get name => test.name;
 
   @override
   Future<TestStatus> get status => _statusCompleter.future;
