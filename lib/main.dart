@@ -86,18 +86,24 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Text(
-              'All Test Suites',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 30),
-            ),
             Expanded(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: 200.0),
                 child: ListView.builder(
                   itemCount: suites.values.length,
                   itemBuilder: (context, index) {
-                    return ListTile(
-                        title: TestSuiteWidget(suites.values.elementAt(index)));
+                    var suite = suites.values.elementAt(index);
+                    return ExpansionTile(
+                        title: Text(
+                          '[${suite.suite.platform}] ${suite.suite.path}',
+                          style: TextStyle(fontSize: 20),
+                        ),
+                        children: [
+                          Padding(
+                              padding: EdgeInsets.only(
+                                  left: 16, right: 16, bottom: 16),
+                              child: TestSuiteWidget(suite)),
+                        ]);
                   },
                 ),
               ),
@@ -126,6 +132,11 @@ class _TestSuiteState extends State<TestSuiteWidget> {
   _TestSuiteState(this.suite);
 
   @override
+  void didUpdateWidget(TestSuiteWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
   void initState() {
     super.initState();
     _groupListener = suite.groups.listen((group) {
@@ -147,8 +158,11 @@ class _TestSuiteState extends State<TestSuiteWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text('Suite: ${suite.suite.path} on ${suite.suite.platform}'),
-        for (var group in groups.values) TestGroupWidget(group),
+        for (var group in groups.values)
+          Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: TestGroupWidget(group),
+          ),
       ],
     );
   }
@@ -191,10 +205,18 @@ class _TestGroupState extends State<TestGroupWidget> {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        if (group.group.name != null) Text('Group: ${group.group.name}'),
-        for (var test in tests.values) TestRunWidget(test),
+      children: [
+        if (group.group.name != null)
+          Row(children: [
+            Text('Group: ${group.group.name}'),
+          ]),
+        for (var test in tests.values)
+          Row(children: [
+            Padding(
+              child: TestRunWidget(test),
+              padding: EdgeInsets.only(left: 8, top: 4),
+            ),
+          ]),
       ],
     );
   }
