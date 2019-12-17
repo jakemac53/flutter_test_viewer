@@ -87,7 +87,7 @@ class _HomePageState extends State<HomePage> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Text(
-              'All Suites',
+              'All Test Suites',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 30),
             ),
             Expanded(
@@ -145,6 +145,7 @@ class _TestSuiteState extends State<TestSuiteWidget> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text('Suite: ${suite.suite.path} on ${suite.suite.platform}'),
         for (var group in groups.values) TestGroupWidget(group),
@@ -190,13 +191,63 @@ class _TestGroupState extends State<TestGroupWidget> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         if (group.group.name != null) Text('Group: ${group.group.name}'),
-        for (var test in tests.values)
-          Text(
-            'Test: ${test.test.name}',
-          ),
+        for (var test in tests.values) TestRunWidget(test),
       ],
     );
+  }
+}
+
+class TestRunWidget extends StatefulWidget {
+  TestRunWidget(this.testRun, {Key key}) : super(key: key);
+
+  final TestRun testRun;
+
+  @override
+  _TestRunState createState() => _TestRunState(testRun);
+}
+
+class _TestRunState extends State<TestRunWidget> {
+  final TestRun testRun;
+  TestStatus status;
+
+  _TestRunState(this.testRun);
+
+  @override
+  void initState() {
+    super.initState();
+    testRun.status.then((status) {
+      setState(() {
+        this.status = status;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Text(
+          'Test: ${testRun.test.name}',
+          style: TextStyle(color: _getColor()),
+        ),
+      ],
+    );
+  }
+
+  Color _getColor() {
+    if (status == null) return Colors.grey;
+    switch (status) {
+      case TestStatus.Succeess:
+        return Colors.green;
+        break;
+      case TestStatus.Error:
+      case TestStatus.Failure:
+        return Colors.red;
+        break;
+    }
+    throw StateError('Unreachable code');
   }
 }
