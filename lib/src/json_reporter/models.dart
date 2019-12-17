@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:json_annotation/json_annotation.dart';
 
 part 'models.g.dart';
@@ -7,11 +9,41 @@ abstract class Event {
   //
   // This is always one of the subclass types listed below.
   String get type;
+
+  static Event parse(Map<String, dynamic> json) {
+    var eventType = json['type'];
+    switch (eventType) {
+      case 'start':
+        return StartEvent.fromJson(json);
+      case 'allSuites':
+        return AllSuitesEvent.fromJson(json);
+      case 'suite':
+        return SuiteEvent.fromJson(json);
+      case 'debug':
+        return DebugEvent.fromJson(json);
+      case 'group':
+        return GroupEvent.fromJson(json);
+      case 'testStart':
+        return TestStartEvent.fromJson(json);
+      case 'print':
+        return MessageEvent.fromJson(json);
+      case 'error':
+        return ErrorEvent.fromJson(json);
+      case 'testDone':
+        return TestDoneEvent.fromJson(json);
+      case 'done':
+        return DoneEvent.fromJson(json);
+      default:
+        throw UnsupportedError(
+            'Unsupporte event type `$eventType`, full JSON object was:\n'
+            '${JsonEncoder.withIndent('  ').convert(json)}');
+    }
+  }
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class StartEvent implements Event {
-  String get type => "start";
+  String get type => 'start';
 
   // The version of the JSON reporter protocol being used.
   //
@@ -31,9 +63,9 @@ class StartEvent implements Event {
       _$StartEventFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class AllSuitesEvent implements Event {
-  String get type => "allSuites";
+  String get type => 'allSuites';
 
   /// The total number of suites that will be loaded.
   final int count;
@@ -44,9 +76,9 @@ class AllSuitesEvent implements Event {
       _$AllSuitesEventFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class SuiteEvent implements Event {
-  String get type => "suite";
+  String get type => 'suite';
 
   /// Metadata about the suite.
   final Suite suite;
@@ -57,9 +89,9 @@ class SuiteEvent implements Event {
       _$SuiteEventFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class DebugEvent implements Event {
-  String get type => "debug";
+  String get type => 'debug';
 
   /// The suite for which debug information is reported.
   final int suiteID;
@@ -78,9 +110,9 @@ class DebugEvent implements Event {
       _$DebugEventFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class GroupEvent implements Event {
-  String get type => "group";
+  String get type => 'group';
 
   /// Metadata about the group.
   final Group group;
@@ -91,9 +123,9 @@ class GroupEvent implements Event {
       _$GroupEventFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class TestStartEvent implements Event {
-  String get type => "testStart";
+  String get type => 'testStart';
 
   // Metadata about the test that started.
   final Test test;
@@ -104,9 +136,9 @@ class TestStartEvent implements Event {
       _$TestStartEventFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class MessageEvent implements Event {
-  String get type => "print";
+  String get type => 'print';
 
   // The ID of the test that printed a message.
   final int testID;
@@ -123,9 +155,9 @@ class MessageEvent implements Event {
       _$MessageEventFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class ErrorEvent implements Event {
-  String get type => "error";
+  String get type => 'error';
 
   // The ID of the test that experienced the error.
   final int testID;
@@ -145,9 +177,9 @@ class ErrorEvent implements Event {
       _$ErrorEventFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class TestDoneEvent implements Event {
-  String get type => "testDone";
+  String get type => 'testDone';
 
   // The ID of the test that completed.
   final int testID;
@@ -167,9 +199,9 @@ class TestDoneEvent implements Event {
       _$TestDoneEventFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class DoneEvent implements Event {
-  String get type => "done";
+  String get type => 'done';
 
   // Whether all tests succeeded (or were skipped).
   final bool success;
@@ -180,7 +212,7 @@ class DoneEvent implements Event {
       _$DoneEventFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class Test {
   // An opaque ID for the test.
   final int id;
@@ -239,7 +271,7 @@ class Test {
   factory Test.fromJson(Map<String, dynamic> json) => _$TestFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class Suite {
   // An opaque ID for the group.
   final int id;
@@ -255,7 +287,7 @@ class Suite {
   factory Suite.fromJson(Map<String, dynamic> json) => _$SuiteFromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class Group {
   // An opaque ID for the group.
   final int id;
