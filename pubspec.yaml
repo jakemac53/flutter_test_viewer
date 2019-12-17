@@ -1,5 +1,5 @@
-name: example_flutter
-description: An example project for flutter-desktop-embedding.
+name: flutter_test_viewer
+description: A flutter app for viewing test status and re-running tests.
 
 version: 0.1.0
 

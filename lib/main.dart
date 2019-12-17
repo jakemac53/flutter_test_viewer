@@ -19,8 +19,8 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 // import 'package:flutter/services.dart';
 
-import 'package:example_flutter/src/test_runner.dart';
-import 'package:example_flutter/src/json_reporter/json_reporter_runner.dart';
+import 'package:flutter_test_viewer/src/test_runner.dart';
+import 'package:flutter_test_viewer/src/json_reporter/json_reporter_runner.dart';
 
 void main() {
   // See https://github.com/flutter/flutter/wiki/Desktop-shells#target-platform-override
