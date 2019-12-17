@@ -8,10 +8,8 @@ abstract class TestResults {
   Stream<TestSuite> get testSuites;
 }
 
-class TestSuite {
-  final Stream<TestGroup> groups;
-
-  TestSuite(this.groups);
+abstract class TestSuite {
+  Stream<TestGroup> get groups;
 }
 
 class TestGroup {
