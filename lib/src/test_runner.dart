@@ -12,22 +12,18 @@ abstract class TestSuite {
   Stream<TestGroup> get groups;
 }
 
-class TestGroup {
-  final Stream<Test> tests;
-
-  TestGroup(this.tests);
+abstract class TestGroup {
+  Stream<Test> get tests;
 }
 
-class Test {
-  final String name;
-  final Future<TestStatus> status;
-  final Stream<void> errors;
-
-  Test(this.name, this.status, this.errors);
+abstract class Test {
+  String get name;
+  Future<TestStatus> get status;
+  Stream<void> get errors;
 }
 
 enum TestStatus {
   Succeess,
   Failure,
-  Timeout,
+  Error,
 }
