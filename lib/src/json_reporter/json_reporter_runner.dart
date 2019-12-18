@@ -4,16 +4,51 @@ import 'dart:io';
 
 import 'package:stream_transform/stream_transform.dart';
 
-import '../models.dart' hide Test;
-import '../models.dart' as models show Test;
+import '../models.dart';
 import '../test_runner.dart';
 
 class JsonReporterRunner implements TestRunner {
   @override
   TestResults runAllTests() {
-    print('running `pub run test`');
     var testProcess = Process.start(
         'pub', ['run', 'test', '--reporter', 'json'],
+        workingDirectory: '/usr/local/google/home/jakemac/build/build_modules');
+    return _JsonReporterResults(testProcess);
+  }
+
+  @override
+  TestResults runSuite(TestSuite suite) {
+    var testProcess = Process.start(
+        'pub',
+        [
+          'run',
+          'test',
+          '--reporter',
+          'json',
+          suite.suite.path,
+          '-p',
+          suite.suite.platform
+        ],
+        workingDirectory: '/usr/local/google/home/jakemac/build/build_modules');
+    return _JsonReporterResults(testProcess);
+  }
+
+  @override
+  TestResults runTest(TestRun test) {
+    var suite = test.group.suite;
+    var testProcess = Process.start(
+        'pub',
+        [
+          'run',
+          'test',
+          '--reporter',
+          'json',
+          suite.suite.path,
+          '-p',
+          suite.suite.platform,
+          '-n',
+          test.test.name,
+        ],
         workingDirectory: '/usr/local/google/home/jakemac/build/build_modules');
     return _JsonReporterResults(testProcess);
   }
@@ -130,7 +165,7 @@ class _JsonReporterResults implements TestResults {
   }
 
   void _handleDone(DoneEvent event) {
-    // TODO: anything?
+    _suites.values.forEach((s) => s.close());
   }
 }
 
@@ -169,11 +204,37 @@ class _JsonTestGroup implements TestGroup {
 
   final _JsonTestSuite suite;
 
-  _JsonTestGroup(this.group, this.suite);
+  // Includes number of tests from children.
+  int _testsRan = 0;
+
+  _JsonTestGroup(this.group, this.suite) {
+    if (group.testCount == 0) close();
+  }
 
   void addTest(_JsonTestTest test) {
     _seenTests.add(test);
     _testController.add(test);
+    _testsRan++;
+    if (_testsRan == group.testCount) close();
+
+    _JsonTestGroup parent = this;
+
+    _JsonTestGroup _nextParent() {
+      if (parent.group.parentID != null) {
+        parent = suite._activeTestGroups[parent.group.parentID];
+        if (parent == null) {
+          throw StateError('No group found with id ${group.parentID}!');
+        }
+      } else {
+        parent = null;
+      }
+      return parent;
+    }
+
+    while (_nextParent() != null) {
+      parent._testsRan++;
+      if (parent._testsRan == parent.group.testCount) parent.close();
+    }
   }
 
   void close() => _testController.close();
@@ -188,7 +249,7 @@ class _JsonTestTest implements TestRun {
   Future<TestStatus> get status => _statusCompleter.future;
   final _statusCompleter = Completer<TestStatus>();
 
-  final models.Test test;
+  final Test test;
 
   final _JsonTestGroup group;
 

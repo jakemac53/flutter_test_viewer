@@ -4,6 +4,10 @@ import 'models.dart';
 
 abstract class TestRunner {
   TestResults runAllTests();
+
+  TestResults runSuite(TestSuite suite);
+
+  TestResults runTest(TestRun test);
 }
 
 abstract class TestResults {
@@ -19,6 +23,8 @@ abstract class TestSuite {
 }
 
 abstract class TestGroup {
+  TestSuite get suite;
+
   Group get group;
 
   /// Return a new stream each time which will emit all events.
@@ -26,6 +32,8 @@ abstract class TestGroup {
 }
 
 abstract class TestRun {
+  TestGroup get group;
+
   Test get test;
 
   Future<TestStatus> get status;

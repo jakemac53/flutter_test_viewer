@@ -17,10 +17,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
+import 'package:flutter_test_viewer/src/models.dart';
 // import 'package:flutter/services.dart';
 
 import 'package:flutter_test_viewer/src/test_runner.dart';
 import 'package:flutter_test_viewer/src/json_reporter/json_reporter_runner.dart';
+
+import 'package:provider/provider.dart';
 
 void main() {
   // See https://github.com/flutter/flutter/wiki/Desktop-shells#target-platform-override
@@ -57,12 +60,14 @@ class _HomePageState extends State<HomePage> {
   final suites = <int, TestSuite>{};
   StreamSubscription<TestSuite> _suiteListener;
 
+  TestRunner _testRunner;
+
   @override
   void initState() {
     super.initState();
 
-    var runner = JsonReporterRunner();
-    _suiteListener = runner.runAllTests().testSuites.listen((suite) {
+    _testRunner = JsonReporterRunner();
+    _suiteListener = _testRunner.runAllTests().testSuites.listen((suite) {
       setState(() {
         suites[suite.suite.id] = suite;
       });
@@ -91,7 +96,10 @@ class _HomePageState extends State<HomePage> {
                 itemCount: suites.values.length,
                 itemBuilder: (context, index) {
                   var suite = suites.values.elementAt(index);
-                  return TestSuiteListTile(suite);
+                  return Provider<TestRunner>.value(
+                    value: _testRunner,
+                    child: TestSuiteListTile(suite),
+                  );
                 },
               ),
             ),
@@ -102,6 +110,8 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+/// A list tile for a [TestSuite] which expands to show all the tests
+/// and keeps itself alive when scrolled away so it can retain its state.
 class TestSuiteListTile extends StatefulWidget {
   final TestSuite suite;
 
@@ -224,12 +234,7 @@ class _TestGroupState extends State<TestGroupWidget> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        for (var test in tests.values)
-          Card(
-              child: ListTile(
-            title: TestRunWidget(test),
-            dense: true,
-          )),
+        for (var test in tests.values) TestRunWidget(test),
       ],
     );
   }
@@ -245,35 +250,40 @@ class TestRunWidget extends StatefulWidget {
 }
 
 class _TestRunState extends State<TestRunWidget> {
-  final TestRun testRun;
-  TestStatus status;
+  TestRun testRun;
 
   _TestRunState(this.testRun);
 
   @override
-  void initState() {
-    super.initState();
-    testRun.status.then((status) {
-      setState(() {
-        this.status = status;
-      });
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          testRun.test.name,
-          style: TextStyle(color: _getColor()),
+    return Card(
+      child: ListTile(
+        title: FutureBuilder(
+            future: testRun.status,
+            builder: (_, snapshot) => Text(
+                  testRun.test.name,
+                  style: TextStyle(color: _getColor(snapshot.data)),
+                )),
+        trailing: Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: FloatingActionButton(
+            onPressed: () => _rerunTest(context),
+            tooltip: 'Re-run test',
+            child: new Icon(
+              Icons.refresh,
+            ),
+            elevation: 4,
+            mini: true,
+          ),
         ),
-      ],
+        dense: true,
+      ),
     );
   }
 
-  Color _getColor() {
+  Color _getColor(TestStatus status) {
+    print(
+        'Getting color for test ${testRun.test.name} with status $status - ${testRun.runtimeType}');
     if (status == null) return Colors.grey;
     switch (status) {
       case TestStatus.Succeess:
@@ -285,5 +295,54 @@ class _TestRunState extends State<TestRunWidget> {
         break;
     }
     throw StateError('Unreachable code');
+  }
+
+  void _rerunTest(context) async {
+    var pending = PendingTestReRun(testRun);
+    setState(() {
+      testRun = pending;
+    });
+    var testRunner = Provider.of<TestRunner>(context);
+    var results = testRunner.runTest(testRun);
+    var suite = await results.testSuites.single;
+    TestRun newTestRun;
+    await for (var group in suite.groups) {
+      if (newTestRun != null) break;
+      await for (var test in group.tests) {
+        if (test.test.name == testRun.test.name) {
+          newTestRun = test;
+          break;
+        }
+      }
+    }
+    setState(() {
+      pending._statusCompleter.complete(newTestRun.status);
+    });
+  }
+}
+
+class PendingTestReRun implements TestRun {
+  @override
+  Stream<void> get errors => _errorsController.stream;
+  final _errorsController = StreamController<void>.broadcast();
+
+  @override
+  TestGroup get group => _original.group;
+
+  @override
+  Future<TestStatus> status = Future.value(null);
+  final _statusCompleter = Completer<TestStatus>();
+
+  @override
+  // TODO: Update other fields from the test (line # etc?)
+  Test get test => _original.test;
+
+  final TestRun _original;
+
+  PendingTestReRun(this._original) {
+    _statusCompleter.future.whenComplete(() {
+      _errorsController.close();
+      status = _statusCompleter.future;
+    });
   }
 }
