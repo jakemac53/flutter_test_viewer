@@ -87,25 +87,12 @@ class _HomePageState extends State<HomePage> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Expanded(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: 200.0),
-                child: ListView.builder(
-                  itemCount: suites.values.length,
-                  itemBuilder: (context, index) {
-                    var suite = suites.values.elementAt(index);
-                    return ExpansionTile(
-                        title: Text(
-                          '[${suite.suite.platform}] ${suite.suite.path}',
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        children: [
-                          Padding(
-                              padding: EdgeInsets.only(
-                                  left: 16, right: 16, bottom: 16),
-                              child: TestSuiteWidget(suite)),
-                        ]);
-                  },
-                ),
+              child: ListView.builder(
+                itemCount: suites.values.length,
+                itemBuilder: (context, index) {
+                  var suite = suites.values.elementAt(index);
+                  return TestSuiteListTile(suite);
+                },
               ),
             ),
           ],
@@ -113,6 +100,41 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
+
+class TestSuiteListTile extends StatefulWidget {
+  final TestSuite suite;
+
+  TestSuiteListTile(this.suite, {Key key}) : super(key: key);
+
+  @override
+  _TestSuiteListTileState createState() => _TestSuiteListTileState(suite);
+}
+
+class _TestSuiteListTileState extends State<TestSuiteListTile>
+    with AutomaticKeepAliveClientMixin {
+  final TestSuite suite;
+
+  _TestSuiteListTileState(this.suite);
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return Container(
+      child: Card(
+        child: ExpansionTile(
+          title: Text(
+            '[${suite.suite.platform}] ${suite.suite.path}',
+            style: TextStyle(fontSize: 20),
+          ),
+          children: [TestSuiteWidget(suite)],
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class TestSuiteWidget extends StatefulWidget {
@@ -158,11 +180,7 @@ class _TestSuiteState extends State<TestSuiteWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        for (var group in groups.values)
-          Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: TestGroupWidget(group),
-          ),
+        for (var group in groups.values) TestGroupWidget(group),
       ],
     );
   }
@@ -206,17 +224,12 @@ class _TestGroupState extends State<TestGroupWidget> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        if (group.group.name != null)
-          Row(children: [
-            Text('Group: ${group.group.name}'),
-          ]),
         for (var test in tests.values)
-          Row(children: [
-            Padding(
-              child: TestRunWidget(test),
-              padding: EdgeInsets.only(left: 8, top: 4),
-            ),
-          ]),
+          Card(
+              child: ListTile(
+            title: TestRunWidget(test),
+            dense: true,
+          )),
       ],
     );
   }
@@ -250,9 +263,10 @@ class _TestRunState extends State<TestRunWidget> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'Test: ${testRun.test.name}',
+          testRun.test.name,
           style: TextStyle(color: _getColor()),
         ),
       ],
