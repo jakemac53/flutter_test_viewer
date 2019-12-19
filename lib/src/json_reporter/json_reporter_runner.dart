@@ -164,9 +164,23 @@ class _JsonReporterResults implements TestResults {
     test.onDone(event);
   }
 
-  void _handleDone(DoneEvent event) {
+  void _handleDone(DoneEvent event) async {
     _suites.values.forEach((s) => s.close());
+    for (var suite in _suites.values) {
+      var status = await suite.status;
+      if (status != TestStatus.Success) {
+        _statusCompleter.complete(status);
+        break;
+      }
+    }
+    if (!_statusCompleter.isCompleted) {
+      _statusCompleter.complete(TestStatus.Success);
+    }
   }
+
+  @override
+  Future<TestStatus> get status => _statusCompleter.future;
+  final _statusCompleter = Completer<TestStatus>();
 }
 
 class _JsonTestSuite implements TestSuite {
@@ -189,7 +203,23 @@ class _JsonTestSuite implements TestSuite {
     _groupsController.add(group);
   }
 
-  void close() => _groupsController.close();
+  void close() async {
+    _groupsController.close();
+    for (var group in _seenGroups) {
+      var groupStatus = await group.status;
+      if (groupStatus != TestStatus.Success) {
+        _statusCompleter.complete(groupStatus);
+        break;
+      }
+    }
+    if (!_statusCompleter.isCompleted) {
+      _statusCompleter.complete(TestStatus.Success);
+    }
+  }
+
+  @override
+  Future<TestStatus> get status => _statusCompleter.future;
+  final _statusCompleter = Completer<TestStatus>();
 }
 
 class _JsonTestGroup implements TestGroup {
@@ -237,7 +267,23 @@ class _JsonTestGroup implements TestGroup {
     }
   }
 
-  void close() => _testController.close();
+  void close() async {
+    _testController.close();
+    for (var test in _seenTests) {
+      var testStatus = await test.status;
+      if (testStatus != TestStatus.Success) {
+        _statusCompleter.complete(testStatus);
+        break;
+      }
+    }
+    if (!_statusCompleter.isCompleted) {
+      _statusCompleter.complete(TestStatus.Success);
+    }
+  }
+
+  @override
+  Future<TestStatus> get status => _statusCompleter.future;
+  final _statusCompleter = Completer<TestStatus>();
 }
 
 class _JsonTestTest implements TestRun {
@@ -269,7 +315,7 @@ class _JsonTestTest implements TestRun {
     TestStatus status;
     switch (event.result) {
       case 'success':
-        status = TestStatus.Succeess;
+        status = TestStatus.Success;
         break;
       case 'failure':
         status = TestStatus.Failure;

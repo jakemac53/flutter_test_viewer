@@ -13,6 +13,8 @@ abstract class TestRunner {
 abstract class TestResults {
   /// Returns a new stream each time which will emit all events.
   Stream<TestSuite> get testSuites;
+
+  Future<TestStatus> get status;
 }
 
 abstract class TestSuite {
@@ -20,6 +22,8 @@ abstract class TestSuite {
 
   /// Return a new stream each time which will emit all events.
   Stream<TestGroup> get groups;
+
+  Future<TestStatus> get status;
 }
 
 abstract class TestGroup {
@@ -29,6 +33,8 @@ abstract class TestGroup {
 
   /// Return a new stream each time which will emit all events.
   Stream<TestRun> get tests;
+
+  Future<TestStatus> get status;
 }
 
 abstract class TestRun {
@@ -46,7 +52,7 @@ abstract class TestRun {
 }
 
 enum TestStatus {
-  Succeess,
+  Success,
   Failure,
   Error,
 }

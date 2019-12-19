@@ -143,10 +143,13 @@ class _TestSuiteListTileState extends State<TestSuiteListTile> {
     return Container(
       child: Card(
         child: ExpansionTile(
-          title: Text(
-            '[${suite.suite.platform}] ${suite.suite.path}',
-            style: TextStyle(fontSize: 20),
-          ),
+          title: FutureBuilder(
+              future: suite.status,
+              builder: (_, snapshot) => Text(
+                    '[${suite.suite.platform}] ${suite.suite.path}',
+                    style: TextStyle(
+                        color: _getColor(snapshot.data), fontSize: 20),
+                  )),
           children: [TestSuiteWidget(suite)],
           trailing: FloatingActionButton(
             onPressed: widget.rerunSuite,
@@ -351,20 +354,6 @@ class _TestRunState extends State<TestRunWidget> {
       ),
     );
   }
-
-  Color _getColor(TestStatus status) {
-    if (status == null) return Colors.grey;
-    switch (status) {
-      case TestStatus.Succeess:
-        return Colors.green;
-        break;
-      case TestStatus.Error:
-      case TestStatus.Failure:
-        return Colors.red;
-        break;
-    }
-    throw StateError('Unreachable code');
-  }
 }
 
 class PendingTestReRun implements TestRun {
@@ -391,4 +380,18 @@ class PendingTestReRun implements TestRun {
       status = _statusCompleter.future;
     });
   }
+}
+
+Color _getColor(TestStatus status) {
+  if (status == null) return Colors.grey;
+  switch (status) {
+    case TestStatus.Success:
+      return Colors.green;
+      break;
+    case TestStatus.Error:
+    case TestStatus.Failure:
+      return Colors.red;
+      break;
+  }
+  throw StateError('Unreachable code');
 }
