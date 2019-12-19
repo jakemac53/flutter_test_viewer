@@ -57,7 +57,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final suites = <int, TestSuite>{};
+  final suites = <TestSuite>[];
   StreamSubscription<TestSuite> _suiteListener;
 
   TestRunner _testRunner;
@@ -69,7 +69,7 @@ class _HomePageState extends State<HomePage> {
     _testRunner = JsonReporterRunner();
     _suiteListener = _testRunner.runAllTests().testSuites.listen((suite) {
       setState(() {
-        suites[suite.suite.id] = suite;
+        suites.add(suite);
       });
     });
   }
@@ -93,12 +93,13 @@ class _HomePageState extends State<HomePage> {
           children: [
             Expanded(
               child: ListView.builder(
-                itemCount: suites.values.length,
+                itemCount: suites.length,
                 itemBuilder: (context, index) {
-                  var suite = suites.values.elementAt(index);
+                  var suite = suites[index];
                   return Provider<TestRunner>.value(
                     value: _testRunner,
-                    child: TestSuiteListTile(suite),
+                    child: TestSuiteListTile(
+                        suite, () => _rerunSuite(context, index)),
                   );
                 },
               ),
@@ -108,6 +109,15 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  void _rerunSuite(BuildContext context, int index) async {
+    var suite = suites[index];
+    var results = _testRunner.runSuite(suite);
+    var newSuite = await results.testSuites.single;
+    setState(() {
+      suites[index] = newSuite;
+    });
+  }
 }
 
 /// A list tile for a [TestSuite] which expands to show all the tests
@@ -115,21 +125,21 @@ class _HomePageState extends State<HomePage> {
 class TestSuiteListTile extends StatefulWidget {
   final TestSuite suite;
 
-  TestSuiteListTile(this.suite, {Key key}) : super(key: key);
+  final void Function() rerunSuite;
+
+  TestSuiteListTile(this.suite, this.rerunSuite, {Key key}) : super(key: key);
 
   @override
-  _TestSuiteListTileState createState() => _TestSuiteListTileState(suite);
+  _TestSuiteListTileState createState() => _TestSuiteListTileState();
 }
 
-class _TestSuiteListTileState extends State<TestSuiteListTile>
-    with AutomaticKeepAliveClientMixin {
-  final TestSuite suite;
+class _TestSuiteListTileState extends State<TestSuiteListTile> {
+  TestSuite get suite => widget.suite;
 
-  _TestSuiteListTileState(this.suite);
+  _TestSuiteListTileState();
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     return Container(
       child: Card(
         child: ExpansionTile(
@@ -138,13 +148,19 @@ class _TestSuiteListTileState extends State<TestSuiteListTile>
             style: TextStyle(fontSize: 20),
           ),
           children: [TestSuiteWidget(suite)],
+          trailing: FloatingActionButton(
+            onPressed: widget.rerunSuite,
+            tooltip: 'Re-run suite',
+            child: new Icon(
+              Icons.refresh,
+            ),
+            elevation: 4,
+            mini: true,
+          ),
         ),
       ),
     );
   }
-
-  @override
-  bool get wantKeepAlive => true;
 }
 
 class TestSuiteWidget extends StatefulWidget {
@@ -153,29 +169,39 @@ class TestSuiteWidget extends StatefulWidget {
   final TestSuite suite;
 
   @override
-  _TestSuiteState createState() => _TestSuiteState(suite);
+  _TestSuiteState createState() => _TestSuiteState();
 }
 
 class _TestSuiteState extends State<TestSuiteWidget> {
-  final TestSuite suite;
-  final groups = <int, TestGroup>{};
+  TestSuite get suite => widget.suite;
+  final groups = <TestGroup>[];
   StreamSubscription<TestGroup> _groupListener;
 
-  _TestSuiteState(this.suite);
-
-  @override
-  void didUpdateWidget(TestSuiteWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-  }
+  _TestSuiteState();
 
   @override
   void initState() {
     super.initState();
     _groupListener = suite.groups.listen((group) {
       setState(() {
-        groups[group.group.id] = group;
+        groups.add(group);
       });
     });
+  }
+
+  @override
+  void didUpdateWidget(TestSuiteWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _groupListener?.cancel();
+    setState(() {
+      groups.clear();
+      _groupListener = suite.groups.listen((group) {
+        setState(() {
+          groups.add(group);
+        });
+      });
+    });
+    print('didUpdateWidget: TestSuiteWidget');
   }
 
   @override
@@ -190,37 +216,52 @@ class _TestSuiteState extends State<TestSuiteWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        for (var group in groups.values) TestGroupWidget(group),
+        for (var group in groups) TestGroupWidget(group),
       ],
     );
   }
 }
 
 class TestGroupWidget extends StatefulWidget {
-  TestGroupWidget(this.group, {Key key}) : super(key: key);
-
   final TestGroup group;
 
+  TestGroupWidget(this.group, {Key key}) : super(key: key);
+
   @override
-  _TestGroupState createState() => _TestGroupState(group);
+  _TestGroupState createState() => _TestGroupState();
 }
 
 class _TestGroupState extends State<TestGroupWidget> {
-  final TestGroup group;
-  final tests = <int, TestRun>{};
+  TestGroup get group => widget.group;
+  final tests = <TestRun>[];
 
   StreamSubscription<TestRun> _testRunListener;
 
-  _TestGroupState(this.group);
+  _TestGroupState();
 
   @override
   void initState() {
     super.initState();
     _testRunListener = group.tests.listen((test) {
       setState(() {
-        tests[test.test.id] = test;
+        tests.add(test);
       });
     });
+  }
+
+  @override
+  void didUpdateWidget(TestGroupWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _testRunListener?.cancel();
+    setState(() {
+      tests.clear();
+      _testRunListener = group.tests.listen((test) {
+        setState(() {
+          tests.add(test);
+        });
+      });
+    });
+    print('didUpdateWidget: TestGroupWidget');
   }
 
   @override
@@ -234,73 +275,17 @@ class _TestGroupState extends State<TestGroupWidget> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        for (var test in tests.values) TestRunWidget(test),
+        for (var i = 0; i < tests.length; i++)
+          TestRunWidget(tests[i], () => _rerunTest(context, i)),
       ],
     );
   }
-}
 
-class TestRunWidget extends StatefulWidget {
-  TestRunWidget(this.testRun, {Key key}) : super(key: key);
-
-  final TestRun testRun;
-
-  @override
-  _TestRunState createState() => _TestRunState(testRun);
-}
-
-class _TestRunState extends State<TestRunWidget> {
-  TestRun testRun;
-
-  _TestRunState(this.testRun);
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        title: FutureBuilder(
-            future: testRun.status,
-            builder: (_, snapshot) => Text(
-                  testRun.test.name,
-                  style: TextStyle(color: _getColor(snapshot.data)),
-                )),
-        trailing: Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: FloatingActionButton(
-            onPressed: () => _rerunTest(context),
-            tooltip: 'Re-run test',
-            child: new Icon(
-              Icons.refresh,
-            ),
-            elevation: 4,
-            mini: true,
-          ),
-        ),
-        dense: true,
-      ),
-    );
-  }
-
-  Color _getColor(TestStatus status) {
-    print(
-        'Getting color for test ${testRun.test.name} with status $status - ${testRun.runtimeType}');
-    if (status == null) return Colors.grey;
-    switch (status) {
-      case TestStatus.Succeess:
-        return Colors.green;
-        break;
-      case TestStatus.Error:
-      case TestStatus.Failure:
-        return Colors.red;
-        break;
-    }
-    throw StateError('Unreachable code');
-  }
-
-  void _rerunTest(context) async {
+  void _rerunTest(BuildContext context, int index) async {
+    var testRun = tests[index];
     var pending = PendingTestReRun(testRun);
     setState(() {
-      testRun = pending;
+      tests[index] = pending;
     });
     var testRunner = Provider.of<TestRunner>(context);
     var results = testRunner.runTest(testRun);
@@ -318,6 +303,67 @@ class _TestRunState extends State<TestRunWidget> {
     setState(() {
       pending._statusCompleter.complete(newTestRun.status);
     });
+  }
+}
+
+class TestRunWidget extends StatefulWidget {
+  final TestRun testRun;
+  final void Function() rerunTest;
+
+  TestRunWidget(this.testRun, this.rerunTest, {Key key}) : super(key: key);
+
+  @override
+  _TestRunState createState() => _TestRunState();
+}
+
+class _TestRunState extends State<TestRunWidget> {
+  TestRun get testRun => widget.testRun;
+
+  @override
+  void didUpdateWidget(TestRunWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    print('didUpdateWidget: TestRunWidget');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        title: FutureBuilder(
+            future: testRun.status,
+            builder: (_, snapshot) => Text(
+                  testRun.test.name,
+                  style: TextStyle(color: _getColor(snapshot.data)),
+                )),
+        trailing: Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: FloatingActionButton(
+            onPressed: widget.rerunTest,
+            tooltip: 'Re-run test',
+            child: new Icon(
+              Icons.refresh,
+            ),
+            elevation: 4,
+            mini: true,
+          ),
+        ),
+        dense: true,
+      ),
+    );
+  }
+
+  Color _getColor(TestStatus status) {
+    if (status == null) return Colors.grey;
+    switch (status) {
+      case TestStatus.Succeess:
+        return Colors.green;
+        break;
+      case TestStatus.Error:
+      case TestStatus.Failure:
+        return Colors.red;
+        break;
+    }
+    throw StateError('Unreachable code');
   }
 }
 
